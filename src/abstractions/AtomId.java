@@ -68,9 +68,9 @@ public class AtomId {
 			id = new ArrayList<Integer>(prev.id);
 			id.set(id.size()-1, id.get(id.size()-1) + 1);
 		}
-		System.out.println("constructor q quero: " + this.prettyPrint());
-		System.out.println("prev: " + prev.prettyPrint());
-		System.out.println("next: " + next.prettyPrint());
+		//System.out.println("constructor q quero: " + this.prettyPrint());
+		//System.out.println("prev: " + prev.prettyPrint());
+		//System.out.println("next: " + next.prettyPrint());
 	}
 	
 	// ************** other methods
@@ -108,6 +108,10 @@ public class AtomId {
 		if (ic == null)
 			return true;
 		return false;
+	}
+	
+	boolean equals(AtomId aid) {
+		return this.id.toString().equals(aid.id.toString());
 	}
 	
 	public String prettyPrint() {

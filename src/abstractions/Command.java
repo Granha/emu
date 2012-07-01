@@ -3,6 +3,8 @@
  */
 package abstractions;
 
+import java.util.HashMap;
+
 /**
  * @author rdru
  * INV: pos reffers to the position at the beginig of the selection.
@@ -19,11 +21,11 @@ public class Command {
 		this.out = out;
 	}
 	
-	Command(CommandC c) {
+	Command(CommandC c, HashMap<String, Atom> id2atom) {
 		// Constructor for creating q Command based on
 		// a CommandC
 		AtomId aid = c.pos.aid;
-		Pos pos = new Pos(Atom.id2atom.get(aid), c.pos.c);
+		Pos pos = new Pos(id2atom.get(aid), c.pos.c);
 		this.pos = pos;
 		this.in = c.in;
 		this.out = c.out;			
@@ -72,4 +74,15 @@ public class Command {
 		
 		return output.toString();
 	}
+	
+	public boolean isSplit() {
+		return in != null && out == null && 
+					in.isEmpty();
+	}
+	
+	public boolean isJoin() {
+		return in == null && out != null &&
+				out.isEmpty();
+	}
+	
 }

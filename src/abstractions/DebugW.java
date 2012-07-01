@@ -71,6 +71,7 @@ public class DebugW extends JFrame {
 		contentPane.add(lblAddUser);
 
 		atomList = new JTextArea();
+		atomList.setEditable(false);
 		atomList.setBounds(22, 64, 300, 1010);
 		contentPane.add(atomList);
 		atomList.setColumns(50);
@@ -79,7 +80,7 @@ public class DebugW extends JFrame {
 		
 		JScrollPane scroll = new JScrollPane(atomList);
 		scroll.setBounds(22,64,350,400);
-		contentPane.add(scroll);  
+		contentPane.add(scroll);
 
 
 		JLabel lblDocumentManagement = new JLabel("History");
@@ -88,6 +89,7 @@ public class DebugW extends JFrame {
 		contentPane.add(lblDocumentManagement);
 		
 		history = new JTextArea();
+		history.setEditable(false);
 		history.setColumns(50);
 		history.setRows(50);
 		history.setBounds(390, 64, 320, 1010);
@@ -96,7 +98,7 @@ public class DebugW extends JFrame {
 		
 		JScrollPane scroll2 = new JScrollPane(history);
 		scroll2.setBounds(390,64,330,400);
-		contentPane.add(scroll2);  
+		contentPane.add(scroll2);
 		
 		JSeparator vertical = new JSeparator();
 		vertical.setOrientation(SwingConstants.VERTICAL);
@@ -111,5 +113,6 @@ public class DebugW extends JFrame {
 	
 	void setHistory(String text) {
 		history.setText(text);
+		history.setCaretPosition(0);
 	}
 }

@@ -43,6 +43,10 @@ public class Pos {
 	public int getC() {
 		return c;
 	}
+	
+	public boolean equals(Pos pos) {
+		return this.c == pos.c && this.a.id.equals(pos.a.id);
+	}
 
 	// compares 2 Pos objects. Returns true if this is greather than p.
 	// use equals for equality.

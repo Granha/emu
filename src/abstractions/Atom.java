@@ -5,7 +5,6 @@
  */
 package abstractions;
 
-import java.util.HashMap;
 
 /**
  * @author rdru
@@ -18,26 +17,14 @@ public class Atom {
 	//ArrayList<Integer> al;		// list of line breaks for a window with w width.
 	//int w; 					// width for which al was calculated
 
-	// HashMap to speed AtomId to Atom
-	// initialCapacity should be defined at Constants.java
-	static HashMap<String, Atom> id2atom = new HashMap<String, Atom>(200);
-
-
 	// ****************** Constructors:
 	// Returns a new atom locked for uid (unlocked if null) with AtomId based on prev
 	// and next.
 	// Initialize at with String s when provided.
 	public Atom(AtomId id, int uid, String s) {
-		this(id, uid, s, true);
-	}
-	
-	public Atom(AtomId id, int uid, String s, boolean indexable) {
 		this.id = id;
 		this.lock = uid;
 		this.at = new StringBuilder(s);		
-		if (indexable) {
-			id2atom.put(id.prettyPrint(), this);
-		}
 	}
 	
 	Atom(int uid, AtomId prev) {
@@ -58,7 +45,7 @@ public class Atom {
 
 	// return a deep copy of this object without inserting it to the hash
 	public Atom copy() {
-		return new Atom(this.id, this.lock, this.at.toString(), false);
+		return new Atom(this.id, this.lock, this.at.toString());
 	}
 	
 	// Insert character c at position p.	
@@ -149,8 +136,12 @@ public class Atom {
 			System.err.printf("Cannot split, pos, %d, is bigger that length", pos);
 			System.exit(1);
 		}
-		
-		System.out.println("spliting with next = " + next);
+		/*
+		if (next != null)
+			System.out.println("spliting with next = " + next.getAtomId().prettyPrint());
+		else
+			System.out.println("spliting with next = " + null);
+			*/
 		AtomId newId = null;
 		
 		if (next != null) {
@@ -174,7 +165,7 @@ public class Atom {
 	// with the other atom content
 	public void join(Atom atom) {
 		at.append(atom.at);
-		System.out.println("joining atoms");
+		//System.out.println("joining atoms");
 		if (lock != atom.lock) {
 			System.err.print("Cannot join atoms, lock owners differ");
 			System.exit(1);
@@ -188,5 +179,9 @@ public class Atom {
 		output.append(at);
 		
 		return output.toString();
+	}
+	
+	public boolean equals(Atom other) {
+		return id.equals(other.id) && at.equals(other.at);
 	}
 }

@@ -19,6 +19,10 @@ public class EMUDoc extends PlainDocument {
 	public String pathName;
 	public boolean isRemote;
 	
+	// HashMap to speed AtomId to Atom
+	// initialCapacity should be defined at Constants.java
+	private HashMap<String, Atom> id2atom = new HashMap<String, Atom>(200);
+	
 	private DebugW debug = new DebugW();
 
 	// where it is shown and who edits it
@@ -50,10 +54,11 @@ public class EMUDoc extends PlainDocument {
 	// Cria um documento a partir de um arquivo de texto
 	public EMUDoc(String text) {
 		debug.setVisible(true);
-		this.h = new History();
+		this.h = new History(this.id2atom);
 		this.cp = null;
 		this.al = new LinkedList<Atom>();
 		Atom atom = new Atom(new AtomId(), -1, "");
+		id2atom.put(atom.getAtomId().prettyPrint(), atom);
 		this.al.add(atom);
 		this.replace(0, 0, text, null);
 	}
@@ -116,14 +121,14 @@ public class EMUDoc extends PlainDocument {
 		Pos end = offset2Pos(offset + length);
 		Selection sel = new Selection(start, end);
 		
-		System.out.println(sel.prettyPrint());
+		//System.out.println("dumping: " + sel.prettyPrint());
 		
 		return new Part(sel, al);
 	}
 
 	// exit if atom id does not exist in id2atom
 	private Atom getOrDieAtom(AtomId aid) {
-		Atom at = Atom.id2atom.get(aid.prettyPrint());
+		Atom at = id2atom.get(aid.prettyPrint());
 		
 		String msg = "Atom id " + aid.prettyPrint() + " not found in id2atom";
 		assert at != null : msg;
@@ -161,58 +166,64 @@ public class EMUDoc extends PlainDocument {
 		//System.out.println("insertUpdate: "+ chng);
 	//}
 
-	public void replace(int offset, int length, String str, AttributeSet a) {
+	synchronized public void replace(int offset, int length, String str, AttributeSet a) {
 		// when length is zero, replace method behave exactly like insertString
-		//try {
-			Part removedPart = null;
+		Part removedPart = null;
+		
+		// must parse the command to generate a new part
+		Pos start = offset2Pos(offset);
+		Pos end = null;
+		
+		if (length > 0) {
+			removedPart = dumpPart(offset, length);
 			
-			if (length > 0) {
-				removedPart = dumpPart(offset, length);
+			end = offset2Pos(offset + length);
+			// case in which the atom will be completely removed
+			if (true) {
+				int nextIndex = al.indexOf(end.getAtom());
+				assert nextIndex != -1 : "Last atom to be remove was not found in al";
+				
+				nextIndex++;
+				// try to use the beginning of the next atom
+				if (nextIndex < al.size()) {
+					end = new Pos(al.get(nextIndex), 0);
+				}
+				else {
+					end = null;
+				}
 			}
-			
-			// must parse the command to generate a new part
-			Pos start = offset2Pos(offset);
-			Pos end = null;
-			
-			int endIndex = al.indexOf(start) + 1;
-			
-			if (endIndex > 0 && endIndex < al.size()) {
-				end = new Pos(al.get(endIndex), 0);
-			}
+		}
+		else {
+			Atom next = next(start.getAtom());
+			if (next != null)
+				end = new Pos(next, 0);
+		}
+		
+		/*if (end != null)
+			System.out.println("end = " + end.getAtom().getAtomId().prettyPrint());
+		else
+			System.out.println("end = " + null);
+		*/
 
-			// @todo: change uid (-1) to something valid
-			Part insertedPart = new Part(str, start, end, -1);
+		// @todo: change uid (-1) to something valid
+		Part insertedPart = new Part(str, start, end, -1);
 	
-			Command c = new Command(start, removedPart, insertedPart);
-			h.insert(c);
+		Command c = new Command(start, removedPart, insertedPart);
+		h.insert(c);
 			
-			System.out.println("replace: " + str + ", length: " + length);
-			apply(c);
-			
-			//super.replace(offset, length, str, a);
-		/*}
-		catch(BadLocationException e) {
-			System.err.println("replace failed with:" + e);
-			System.exit(1);
-		}*/
+		//System.out.println("replace: " + str + ", length: " + length);
+		apply(c);
     }
 	
-	public void remove(int offset, int length) {
-		//try {
-			Part removedPart = dumpPart(offset, length);
-			Command c = new Command(offset2Pos(offset), removedPart, null);
-			h.insert(c);
-			System.out.println("remove: " + offset + ", lenght: " + length);
-			apply(c);
-			//super.remove(offset, length);
-		/*}
-		catch(BadLocationException e) {
-			System.err.println("remove failed with:" + e);
-			System.exit(1);
-		}*/
+	synchronized public void remove(int offset, int length) {
+		Part removedPart = dumpPart(offset, length);
+		Command c = new Command(offset2Pos(offset), removedPart, null);
+		h.insert(c);
+		//System.out.println("remove: " + offset + ", lenght: " + length);
+		apply(c);
 	}
 	
-	public void undo() {
+	synchronized public void undo() {
 		
 		Command c = h.undo();
 		
@@ -221,7 +232,7 @@ public class EMUDoc extends PlainDocument {
 		}
 	}
 	
-	public void redo() {
+	synchronized public void redo() {
 		
 		Command c = h.redo();
 		
@@ -237,14 +248,12 @@ public class EMUDoc extends PlainDocument {
 		Part in = c.getIn();
 		
 		if (debug != null) {
-			debug.setHistory(c.prettyPrint());
+			debug.setHistory(h.prettyPrint());
 		}
-		
-		System.out.println("applying command\n" + c.prettyPrint());
 		
 		// new line was entered
 		// the atom determined by start must be splited
-		if (in != null && in.isEmpty() && out == null) {
+		if (c.isSplit()) {
 			splitAtom(start);
 			int offset = pos2Offset(start);
 			try {
@@ -255,8 +264,8 @@ public class EMUDoc extends PlainDocument {
 				System.exit(1);
 			}
 		}
-		// a new line was remove, then atoms must be joined
-		else if (out != null && out.isEmpty() && in == null) {
+		// a new line was removed, then atoms must be joined
+		else if (c.isJoin()) {
 			Atom startAtom = start.getAtom();
 			joinAtom(startAtom.getAtomId());
 			int offset = pos2Offset(start);
@@ -276,12 +285,10 @@ public class EMUDoc extends PlainDocument {
 		if (debug != null) {
 			debug.setAtomList(prettyPrint());
 		}
+		
+		// uncomment this line to test compact
+		//h.compact();
 	}
-	
-	//public void removeUpdate(AbstractDocument.DefaultDocumentEvent chng) {
-		//super.removeUpdate(chng);
-		//System.out.println("removeUpdate: "+ chng);
-	//}
 		
 	// ********************** Window manager
 
@@ -425,25 +432,23 @@ public class EMUDoc extends PlainDocument {
 
 		String pt_inic = p.getInic();
 		String pt_final = p.getFinal();
-		
+		ArrayList<Atom> pt_atoms = p.getAtomList();
 		Atom start = getOrDieAtom(pos.getAtom().getAtomId());
 
 		// remove content from the initial atom
-		if (pt_inic != null) {
+		if (pt_inic != null) {			
 			
-			if (pt_final != null) {
-				Atom end = splitAtom(pos);
-				end.insertS(0, pt_final);
+			if (pos.c < start.length() && 
+					pt_atoms != null || pt_final != null) {
+				splitAtom(new Pos(start, pos.c));
 			}
 			
 			start.insertS(pos, pt_inic);
 		}
 		
-		ArrayList<Atom> pt_atoms = p.getAtomList();
-		
 		Atom prev = start;
 		
-		// remove all intermediate atoms
+		// insert atoms
 		if (pt_atoms != null) {
 			for (Atom a: pt_atoms) {
 				insertAtom(prev.getAtomId(), a);
@@ -451,12 +456,22 @@ public class EMUDoc extends PlainDocument {
 			}
 		}
 		
+		if (pt_final != null) {
+			int endIndex = al.indexOf(prev) + 1;
+			
+			assert endIndex < al.size() : "There is no last atom for pt_final";
+			
+			Atom end = al.get(endIndex);
+			
+			end.insertS(0, pt_final);
+		}
+		
 		// change document in the view
 		String content = p.toString();
 		int offset = pos2Offset(pos);
 		
 		try {
-			System.out.printf("finally inserting: offset = %d, content = %s\n", offset, content);
+			//System.out.printf("finally inserting: offset = %d, content = %s\n", offset, content);
 			super.insertString(offset, content, null);
 		}
 		catch(BadLocationException e) {
@@ -495,9 +510,13 @@ public class EMUDoc extends PlainDocument {
 		
 		// remove all intermediate atoms
 		if (pt_atoms != null) {
+			Atom last = pt_atoms.get(pt_atoms.size() -1);
+			
 			for (Atom a: pt_atoms) {
 				delAtom(a.getAtomId());
-				length += a.length() + lsLen;
+				length += a.length();
+				if (a != last || pt_final != null)
+					length += lsLen;
 			}
 		}
 		
@@ -516,7 +535,7 @@ public class EMUDoc extends PlainDocument {
 		}
 		
 		try {
-			System.out.printf("finally removing: offset = %d, len = %d\n", offset, length);
+			//System.out.printf("finally removing: offset = %d, len = %d\n", offset, length);
 			super.remove(offset, length);
 		}
 		catch(BadLocationException e) {
@@ -566,7 +585,7 @@ public class EMUDoc extends PlainDocument {
 		// keep the atom mapping updated
 		// the atoms may have come from elsewhere, and obviously
 		// are not mapped
-		Atom.id2atom.put(newAtom.getAtomId().prettyPrint(), newAtom);
+		id2atom.put(newAtom.getAtomId().prettyPrint(), newAtom);
 	}
 
 	// remove do EMUDoc o Atom passado
@@ -592,10 +611,11 @@ public class EMUDoc extends PlainDocument {
 		}
 		
 		Atom newAtom = atom.split(p.c, next);
+		id2atom.put(newAtom.getAtomId().prettyPrint(), newAtom);
 		
 		al.add(index+1, newAtom);
 
-		return atom;
+		return newAtom;
 	}
 	
 	// Une dois Atom em um novo Atom que retem a AtomId de a.}
