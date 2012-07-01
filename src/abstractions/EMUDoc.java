@@ -199,7 +199,8 @@ public class EMUDoc extends PlainDocument {
 				end = new Pos(next, 0);
 		}
 		
-		/*if (end != null)
+		/*
+		if (end != null)
 			System.out.println("end = " + end.getAtom().getAtomId().prettyPrint());
 		else
 			System.out.println("end = " + null);
@@ -451,8 +452,9 @@ public class EMUDoc extends PlainDocument {
 		// insert atoms
 		if (pt_atoms != null) {
 			for (Atom a: pt_atoms) {
-				insertAtom(prev.getAtomId(), a);
-				prev = a;
+				Atom aCopy = a.copy();
+				insertAtom(prev.getAtomId(), aCopy);
+				prev = aCopy;
 			}
 		}
 		

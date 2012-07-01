@@ -34,9 +34,13 @@ public class AtomId {
 	
 	// Returns a new AtomId which immediately follows id at the same level
 	public AtomId next() {
+		return next(1);
+	}
+
+	public AtomId next(int inc) {
 		ArrayList<Integer> id1 = new ArrayList<Integer>(id);
 		
-		id1.set(id1.size()-1, id1.get(id1.size()-1) + 1);
+		id1.set(id1.size()-1, id1.get(id1.size()-1) + inc);
 		return new AtomId(id1);
 	}
 

@@ -156,6 +156,23 @@ public class Part {
 				this.list.add(atom);
 			}
 		}
+
+		// determine the end position
+		if (pt_final != null) {
+			this.end = new Pos(new Atom(endAid, -1, ""), pt_final.length());
+		}
+		else if (list != null && list.size() > 0) {
+			Atom last = list.get(list.size()-1);
+			this.end = new Pos(last, last.length());
+		}
+		else if (this.isEmpty()) {
+			this.end = start;
+		}
+		else {
+			assert pt_inic != null : "No pt_inic when generating end position";
+			this.end = new Pos(start.getAtom(), start.c + pt_inic.length());
+		}
+		
 	}
 	
 	// returns the initial content of this part
@@ -268,6 +285,159 @@ public class Part {
 		}
 		else if (this.list != other.list)
 			return false;
+		
+		return true;
+	}
+
+	// @warning: we do not copy
+	public void append(Part other) {
+		if (this.pt_final != null) {
+			System.out.println("this.pt_final = " + this.pt_final + ", other.pt_inic = " + other.pt_final);
+			if (other.pt_inic != null)
+				this.pt_final += other.pt_inic;
+			
+			// the new pt_final of this part must go in an atom of its own
+			if (other.list != null || other.pt_final != null) {
+				Atom prevoiusEnd = this.end.getAtom();
+				prevoiusEnd.setText(this.pt_final);
+				this.list.add(prevoiusEnd);
+			}
+		}
+		else if (this.list != null) {
+			
+			if (other.pt_inic != null) {
+				Atom last = this.list.get(this.list.size() - 1);
+				//System.out.println("appending = " + pt_inic +", in a = " + last.at.toString());
+				last.appendS(pt_inic);
+			}
+		}
+		else {
+			assert other.pt_inic != null : "Cannot concatenate other pt_inic is null";
+			this.pt_inic += other.pt_inic;
+		}
+		
+		if (other.list != null) {
+			if (this.list != null)
+				this.list.addAll(other.list);
+			else
+				this.list = other.list;
+		}
+		
+		this.pt_final = other.pt_final;
+		this.end = other.end;
+	}
+	
+	
+	public void removePrefix(Part other) {
+		
+		assert this.pt_inic != null : "this.pt_inic should not be null";
+		assert other.pt_inic != null : "other.pt_inic should not be null";
+		assert this.pt_inic.length() >= other.pt_inic.length() : "Cannot remove prefix is bigger";
+		
+		// clear pt_inic if completely removed
+		if (this.pt_inic.length() == other.pt_inic.length())
+			this.pt_inic = null;
+		else {
+			assert other.list == null : "at this point other.list must be null";
+			assert other.pt_final == null : "at this point ohter.pt_final must be null";
+			
+			String prefix = this.pt_inic.substring(0, other.pt_inic.length());
+			assert prefix.equals(other.pt_inic) : 
+				"Impossible: other.pt_inic = " + other.pt_inic + 
+				"is not prefix of this.pt_inic = " + this.pt_inic;
+			
+			// actually remove
+			this.pt_inic = this.pt_inic.substring(prefix.length(), this.pt_inic.length());			
+		}
+		
+		if (other.list != null) {
+			assert this.list != null : "Impossible: prefix has an atom list " +
+					"that 'this' does not have";
+			assert this.list.size() >= other.list.size() : "Impossible: prefix " +
+					"has a bigger atom list";
+			
+			for (int i = 0; i < other.list.size(); i++) {
+				Atom a1 = this.list.get(0);
+				Atom a2 = this.list.get(i);
+				assert a1.equals(a2) : "Impossible: atoms must be equal";
+				this.list.remove(0);
+			}
+			
+			// clear list if completely removed
+			if (this.list.size() == 0)
+				this.list = null;
+		}
+		
+		if (other.pt_final != null) {
+			
+			// other.pt_final removes something in this.pt_final
+			if (this.list == null) {
+				assert this.pt_final != null : 
+					"Once other.pt_final != null, this.pt_final should be as well";
+			
+				// clear pt_inic if completely removed
+				if (this.pt_final.length() == other.pt_final.length())
+					this.pt_final = null;
+				else {				
+					String prefix = this.pt_final.substring(0, other.pt_final.length());
+					assert prefix.equals(other.pt_final) : 
+					"Impossible: other.pt_final is not prefix of this.pt_final";
+				
+					// actually remove
+					this.pt_final = this.pt_final.substring(prefix.length(), this.pt_final.length());
+				}
+			}
+			// other.pt_final removes a prefix from the first atom in this.list
+			else {
+				Atom a = this.list.get(0);
+				a.removePrefix(other.pt_final);
+			}
+		}
+		
+		// now we have to adjust the internal representation of part
+		if (this.pt_inic == null) {
+			if (this.list != null) {
+				Atom a = this.list.get(0);
+				this.list.remove(0);
+				
+				if (this.list.size() == 0)
+					this.list = null;
+				
+				this.pt_inic = a.getAt().toString();			
+			}
+			else if (this.pt_final != null) {
+				this.pt_inic = this.pt_final;
+				this.pt_final = null;
+			}
+		}
+		
+		// @todo: find out if part.end must be recalculated
+	}
+	
+	private int[] size() {
+		int size[] = new int[3];
+		
+		if (pt_inic != null)
+			size[0] = pt_inic.length();
+		if (list != null)
+			size[1] = list.size();
+		if (pt_final != null)
+			size[2] = pt_final.length();
+		
+		return size;
+	}
+	
+	// returns true if this is the longest part, false otherwise
+	public boolean longest(Part other) {
+		int size1[] = this.size(); 
+		int size2[] = other.size();
+		
+		for (int i = 0; i < size1.length; i++) {
+			if (size1[i] < size2[i])
+				return false;
+			else if (size1[i] > size2[i])
+				return true;
+		}
 		
 		return true;
 	}

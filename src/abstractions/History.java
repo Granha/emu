@@ -18,6 +18,9 @@ import abstractions.Command;
 // Os comandos do usuario local sempre entram na história não compactada, enquanto os dos
 // usuários remotos são anexados ao final da história compactada.
 public class History {
+	
+	static boolean debug = false;
+	
 	// the compacted history must be threadSafe, therefore it is a Vector.
 	Vector<CommandC> histC = new Vector<CommandC>();
 	LinkedList<Command> histU = new LinkedList<Command>();
@@ -81,8 +84,9 @@ public class History {
 		boolean modified = true;
 		Command f, s;
 		/*StringBuilder cmds = new StringBuilder();
-		Command c;
+		Command newC;
 		CommandC cc; */
+		Command newC;
 		
 		// disables user actions (while compacting histU)
 		
@@ -93,74 +97,57 @@ public class History {
 				f = histU.get(i);
 				s = histU.get(i+1);
 				
-				// cancelling commands (pos, partOut, partIn)
-				// (p1, null, i1) (p1, i1, null) --> ()
-				// (p1, o1, null) (p1, null, o1) --> ()
-				// (p1, o1, i1)   (p1, i1, o1)   --> ()
-				if (f.pos.equals(s.pos) &&
-					(f.in == null && s.out == null && f.out != null && f.out.equals(s.in)) ||
-					(f.out == null && s.in == null && f.in != null && f.in.equals(s.out)) ||
-					(f.in != null && f.out != null && f.out.equals(s.in) && f.in.equals(s.out))) {
-					histU.remove(i+1);					
+				if (f.isCollapsible(s)) {
+					if (debug) System.out.println("h: Collapsible");
+					histU.remove(i+1);
 					histU.remove(i);
 					modified = true;
 				}
-				else if(f.pos.equals(s.pos) &&
-						// split followed by join
-						((f.isSplit() && s.isJoin()) || 
-						 (f.isJoin() && s.isSplit()))) {
-					histU.remove(i+1);					
+				else if ((newC=f.forwardDelete(s)) != null) {
+					if (debug) System.out.println("h: forwardDelete");
+					histU.remove(i+1);
 					histU.remove(i);
-					modified = true;					
+					histU.add(i, newC);
+					modified = true;
 				}
-				// two consecutive strings insertions in the same atom
-				// @todo: make it more generic
-				else if (f.in != null && f.out == null &&
-						 s.in != null && s.out == null &&
-						 f.in.getInic() != null && f.in.getAtomList() == null && f.in.getFinal() == null &&
-						 s.in.getInic() != null && s.in.getAtomList() == null && s.in.getFinal() == null &&
-						 f.pos.getAtom().getAtomId().equals(s.pos.getAtom().getAtomId())) {
-												
-						 // forward insertion
-						 if ((f.pos.c + f.in.getInic().length()) == s.pos.c) {
-							 histU.remove(i+1);
-							 f.in.setInic(f.in.getInic() + s.in.getInic());
-							 modified = true;
-						 }
-						 // backwards insertion
-						 else if (f.pos.equals(s.pos)) {
-							 histU.remove(i);
-							 s.in.setInic(s.in.getInic() + f.in.getInic());
-							 modified = true;
-						 }
-						 else
-							 i++;
+				else if ((newC=f.backwardDelete(s)) != null) {
+					if (debug) System.out.println("h: backwardDelete");
+					histU.remove(i+1);
+					histU.remove(i);
+					histU.add(i, newC);
+					modified = true;
 				}
-				// two consecutive string removals
-				// @todo: make it more generic
-				else if (f.in == null && f.out != null &&
-						 s.in == null && s.out != null &&
-						 f.out.getInic() != null && f.out.getAtomList() == null && f.out.getFinal() == null &&
-						 s.out.getInic() != null && s.out.getAtomList() == null && s.out.getFinal() == null) {
-	
-					// forward removal from the same position
-					if (f.pos.equals(s.pos)) {
-						histU.remove(i+1);
-						f.out.setInic(f.out.getInic() + s.out.getInic());
-						modified = true;
-					}
-					// backwards removal
-					else if	((s.pos.c + s.out.getInic().length()) == f.pos.c) {
-						histU.remove(i);
-						s.out.setInic(s.out.getInic() + f.out.getInic());
-						modified = true;
-					}
-					else {
-						i++;
-					}
+				else if ((newC=f.forwardInsert(s)) != null) {
+					if (debug) System.out.println("h: forwardInsert");
+					histU.remove(i+1);
+					histU.remove(i);
+					histU.add(i, newC);
+					modified = true;
 				}
-				else
+				else if ((newC=f.backwardInsert(s)) != null) {
+					if (debug) System.out.println("h: backwardInsert");
+					histU.remove(i+1);
+					histU.remove(i);
+					histU.add(i, newC);
+					modified = true;
+				}
+				else if ((newC=f.insertDelete(s)) != null) {
+					if (debug) System.out.println("h: insertDelete");
+					histU.remove(i+1);
+					histU.remove(i);
+					histU.add(i, newC);
+					modified = true;
+				}
+				else if ((newC=f.deleteInsert(s)) != null) {
+					if (debug) System.out.println("h: deleteInsert");
+					histU.remove(i+1);
+					histU.remove(i);
+					histU.add(i, newC);
+					modified = true;
+				}
+				else {
 					i++;
+				}
 			}
 			
 			// test other patterns ...

@@ -62,6 +62,10 @@ public class Atom {
 		at.insert(c, s);
 	}
 	
+	public void appendS(String s) {
+		at.append(s);
+	}
+	
 	public void removeS(Pos p, String str) {
 		int start = p.c;
 		int end = start + str.length();
@@ -69,6 +73,10 @@ public class Atom {
 		assert end <= at.length() : "string to be removed goes beyond at";
 		
 		at.delete(start, end);
+	}
+	
+	public void setText(String s) {
+		at = new StringBuilder(s);	
 	}
 	
 	// remove the prefix from the atom text
