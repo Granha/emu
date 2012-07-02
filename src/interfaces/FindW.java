@@ -5,21 +5,39 @@ package interfaces;
 	import emu.EMU;
 	import java.awt.EventQueue;
 	
-	import javax.swing.JFrame;
-	import javax.swing.JPanel;
-	import javax.swing.border.EmptyBorder;
-	import javax.swing.JLabel;
-	import javax.swing.JCheckBox;
-	import javax.swing.JButton;
-	import java.awt.event.ActionListener;
-	import java.awt.event.ActionEvent;
-	import javax.swing.JComboBox;
-	import javax.swing.SpringLayout;
-	import javax.swing.JScrollPane;
-	import java.awt.event.ItemListener;
-	import java.awt.event.ItemEvent;
-	import javax.swing.DefaultComboBoxModel;
-	import java.awt.Dimension;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;	
+	
+import java.awt.Color;
+import java.awt.EventQueue;
+import java.awt.Toolkit;
+	
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.border.EmptyBorder;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.DefaultHighlighter;
+import javax.swing.text.Document;
+import javax.swing.text.Highlighter;
+import javax.swing.JLabel;
+import javax.swing.JCheckBox;
+import javax.swing.JButton;
+import javax.swing.JOptionPane;
+
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
+import java.awt.event.WindowEvent;
+
+import javax.swing.JComboBox;
+import javax.swing.SpringLayout;
+import javax.swing.JScrollPane;
+import java.awt.event.ItemListener;
+import java.awt.event.ItemEvent;
+import javax.swing.DefaultComboBoxModel;
+import java.awt.Dimension;
+import javax.swing.JTextPane;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 /**
  * @author rdru
@@ -28,16 +46,18 @@ package interfaces;
 @SuppressWarnings("serial")
 public class FindW extends JFrame {
 	FindW findWindow = this;
-	public int findFile = EMU.curDocIndex();				// index of the file to be searched
+	public int findFile = EMU.curDocIndex();  // index of the file to be searched
 	public boolean useRegExps = false;
 	public boolean ignoreCase = false;
 	public boolean ignoreWhiteSpace = false;
 	public boolean matchWholeWord = false;
-	
+	public boolean highlightAll = false;
+	public EMUW emuw; 
 	
 	private JPanel pane;
-
-	/**
+	private int pos=-1;
+    
+    /**
 	 * Launch the application.
 	 */
 	public static void main(String[] args) {
@@ -59,7 +79,7 @@ public class FindW extends JFrame {
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public FindW() {
 		setMaximumSize(new Dimension(2147483647, 350));
-		setTitle("Find and Replace");
+		setTitle("Search");
 		setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
 		setBounds(100, 100, 661, 339);
 		pane = new JPanel();
@@ -68,6 +88,7 @@ public class FindW extends JFrame {
 		setContentPane(pane);
 		SpringLayout sl_pane = new SpringLayout();
 		pane.setLayout(sl_pane);
+		final JButton findNextBt = new JButton("Find Next");
 		
 		JLabel lblSearchInFile_1 = new JLabel("Search in File:");
 		sl_pane.putConstraint(SpringLayout.NORTH, lblSearchInFile_1, 17, SpringLayout.NORTH, pane);
@@ -93,7 +114,7 @@ public class FindW extends JFrame {
 		sl_pane.putConstraint(SpringLayout.EAST, lblOptions, 118, SpringLayout.WEST, pane);
 		pane.add(lblOptions);
 		
-		JCheckBox chckbxIgnoreCase = new JCheckBox("Ignore case");
+		final JCheckBox chckbxIgnoreCase = new JCheckBox("Ignore Case");
 		chckbxIgnoreCase.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				ignoreCase = !ignoreCase;
@@ -105,7 +126,7 @@ public class FindW extends JFrame {
 		sl_pane.putConstraint(SpringLayout.EAST, chckbxIgnoreCase, 240, SpringLayout.WEST, pane);
 		pane.add(chckbxIgnoreCase);
 		
-		JCheckBox chckbxWholeWord = new JCheckBox("Whole word");
+		final JCheckBox chckbxWholeWord = new JCheckBox("Whole Word");
 		chckbxWholeWord.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				matchWholeWord = !matchWholeWord;
@@ -117,7 +138,7 @@ public class FindW extends JFrame {
 		sl_pane.putConstraint(SpringLayout.EAST, chckbxWholeWord, 254, SpringLayout.WEST, pane);
 		pane.add(chckbxWholeWord);
 		
-		JCheckBox chckbxIgnoreWhiteSpace = new JCheckBox("Ignore white space");
+		final JCheckBox chckbxIgnoreWhiteSpace = new JCheckBox("Ignore White Spaces");
 		sl_pane.putConstraint(SpringLayout.WEST, chckbxIgnoreWhiteSpace, 252, SpringLayout.WEST, pane);
 		sl_pane.putConstraint(SpringLayout.EAST, chckbxIgnoreWhiteSpace, 420, SpringLayout.WEST, pane);
 		chckbxIgnoreWhiteSpace.addActionListener(new ActionListener() {
@@ -127,10 +148,26 @@ public class FindW extends JFrame {
 		});
 		sl_pane.putConstraint(SpringLayout.NORTH, chckbxIgnoreWhiteSpace, 240, SpringLayout.NORTH, pane);
 		pane.add(chckbxIgnoreWhiteSpace);
+
+		final JCheckBox chckbxHighlightAll = new JCheckBox("Highlight All Results");
+		sl_pane.putConstraint(SpringLayout.NORTH, chckbxHighlightAll,240, SpringLayout.NORTH, pane);
+		sl_pane.putConstraint(SpringLayout.WEST, chckbxHighlightAll, 446, SpringLayout.WEST, pane);
+		sl_pane.putConstraint(SpringLayout.EAST, chckbxHighlightAll, 620, SpringLayout.WEST, pane);
+		chckbxHighlightAll.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				highlightAll = !highlightAll;
+				pos = -1;
+			}
+		});
+		pane.add(chckbxHighlightAll);
 		
-		JCheckBox chckbxUseRegExps = new JCheckBox("Use regular expressions");
+		JCheckBox chckbxUseRegExps = new JCheckBox("Use Regular Expressions");
 		chckbxUseRegExps.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
+				chckbxIgnoreWhiteSpace.setEnabled(useRegExps);
+				chckbxWholeWord.setEnabled(useRegExps);
+				chckbxIgnoreCase.setEnabled(useRegExps);
+				
 				useRegExps = !useRegExps;
 			}
 		});
@@ -166,9 +203,194 @@ public class FindW extends JFrame {
 		sl_pane.putConstraint(SpringLayout.NORTH, scrollPane_1, 0, SpringLayout.NORTH, lblReplace);
 		sl_pane.putConstraint(SpringLayout.SOUTH, scrollPane_1, 96, SpringLayout.SOUTH, scrollPane);
 		sl_pane.putConstraint(SpringLayout.EAST, scrollPane_1, 0, SpringLayout.EAST, scrollPane);
+		
+		final JTextPane textfind = new JTextPane();
+		scrollPane.setViewportView(textfind);
 		pane.add(scrollPane_1);
 		
-		JButton findNextBt = new JButton("Find Next");
+		final JTextPane textreplace = new JTextPane();
+		scrollPane_1.setViewportView(textreplace);
+
+		findNextBt.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent arg0) {
+				
+				try {
+		            Highlighter hilite = emuw.text.getHighlighter();
+		            Document doc = emuw.text.getDocument();
+		            String txt = doc.getText(0, doc.getLength());
+
+		            if (txt == null)
+		               return;
+		            
+		            String pattern = textfind.getText();
+
+		            if (pattern == null)
+			           return;
+		            
+		            boolean cor = true;
+
+     		        hilite.removeAllHighlights();
+
+     		        
+		            if (pos >= txt.length() || pos == -1)
+		            {
+		               pos = 0;
+		               emuw.text.setCaretPosition(0);
+		            }
+
+		            // Search for pattern
+
+		            // Searches everything in upper case
+		     	    if (useRegExps == false && ignoreCase == true)
+		     	    {
+		     	    	txt = txt.toUpperCase ();
+		     	    	pattern = pattern.toUpperCase ();
+		     	    }
+		            		            
+ 		            if (ignoreWhiteSpace == true || matchWholeWord == true || useRegExps == true)
+		            { 
+			           int i;
+
+			           String regex = "";
+			           
+			           // Just need to include \b before and after the regular expression			           
+			           if (matchWholeWord == true && useRegExps == false)
+			        	   regex = "\\b";
+			          
+			           // Example: search = "cats"
+			           // regex = c[ \t]*a[ \t]*t[ \t]*s
+			           
+			           if (useRegExps == false)
+			           {	   
+				           if (ignoreWhiteSpace == true)
+					           for (i = 0; i < pattern.length (); i++)
+					           {
+					        	  if (i != pattern.length () - 1)
+					        	     regex += pattern.charAt(i) + "[ \\t]*";
+					        	  else   
+					        		 regex += pattern.charAt(i); 
+					           }
+				           else
+				        	  regex += pattern; 
+                       
+			               if (matchWholeWord == true)
+			        	      regex += "\\b";
+			           }
+			           else
+			           {
+			        	   regex = pattern.replace ("\\", "\\\\");
+			        	   
+			        	   //regex = regex.replace ("\\\\b", "\\b");
+			        	   //regex = regex.replace ("\\\\*", "\\*");
+			        	   
+			        	   
+			        	   System.out.println ("Regular Expression = " + regex);
+			           }
+			           
+			           if (pattern.length () <= 0)
+			        	   return;
+			           
+	        		   Pattern p = Pattern.compile (regex);
+	
+	     		       Matcher matcher = p.matcher (txt);
+
+   	     		 	   int pos_begin = 0;
+	     		  	   int pos_end = 0;	
+	     		       boolean repeat;
+	     		       
+	    		       while (true)
+	    		       {
+	    		    	  repeat = matcher.find ();
+	    		    	 
+	    		    	  if (repeat == false)
+	    		    		 break;
+	    		    	 
+	    		          pos_begin = matcher.start ();
+	    		          pos_end   = matcher.end ();
+
+	    		    	  if (pos > pos_begin)
+	    		    		 continue;
+	    		         
+			        	  if (highlightAll == false)
+			        	     hilite.removeAllHighlights();
+	    		    	  
+	    		    	  if (cor == true)
+	    		    	  {		   
+			        	     hilite.addHighlight(pos_begin, pos_end, new DefaultHighlighter.DefaultHighlightPainter(Color.YELLOW));
+			        	     
+			        	     cor = false;
+	    		    	  }
+	    		    	  else
+	    		    	  {	  
+	    		    		  hilite.addHighlight(pos_begin, pos_end, new DefaultHighlighter.DefaultHighlightPainter(Color.LIGHT_GRAY));
+	    		    		  cor = true;
+	    		    	  }
+	    		    	  
+	    		    	  pos = pos_end;
+				          emuw.text.setCaretPosition(pos);
+				          
+             	          if (highlightAll == false)
+			            	 break;	   
+	    		       }
+	    		      
+	    		       if (repeat == false)
+	    		       {	  
+	    		          pos = 0;
+	    		    	  
+			        	  if (highlightAll == false)
+	    		             JOptionPane.showMessageDialog(FindW.this,new String("End of search"));
+	    		       }
+	    		    }
+		            else
+		            {
+		               while (true)
+		               {	   
+			               pos = txt.indexOf (pattern, pos);
+			               
+				           if (pattern.length () <= 0)
+				        	   return;
+			               
+				           if (pos == -1)
+				           {	   
+				        	  if (highlightAll == false)
+				        	     JOptionPane.showMessageDialog (FindW.this,new String("End of search"));
+				        	  
+				              break;
+				           }
+				           else
+				           {   
+				        	   // Remove previous highlights and put only the last one
+				        	   
+				        	   if (highlightAll == false)
+				        	      hilite.removeAllHighlights();
+				        	   
+		    		    	   if (cor == true)
+		    		    	   {		   
+					        	  // Create highlighter using private painter and apply around pattern
+					        	  hilite.addHighlight(pos, pos+pattern.length(), new DefaultHighlighter.DefaultHighlightPainter(Color.YELLOW));
+					        	  cor = false;
+		    		    	   }
+		    		    	   else
+		    		    	   {	  
+		    		    		   hilite.addHighlight(pos, pos+pattern.length(), new DefaultHighlighter.DefaultHighlightPainter(Color.LIGHT_GRAY));
+		    		    		   cor = true;
+		    		    	   }
+				        	   
+				        	   pos += pattern.length();
+					           emuw.text.setCaretPosition(pos);
+				           }
+				           
+		            	   if (highlightAll == false)
+		            	      break;	   
+		               }
+		            }
+				} catch (BadLocationException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+				}
+			}
+		});
 		sl_pane.putConstraint(SpringLayout.NORTH, findNextBt, 13, SpringLayout.NORTH, pane);
 		sl_pane.putConstraint(SpringLayout.WEST, findNextBt, -145, SpringLayout.EAST, pane);
 		findNextBt.addActionListener(new ActionListener() {
@@ -226,7 +448,12 @@ public class FindW extends JFrame {
 		JButton closeBt = new JButton("Close");
 		closeBt.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				findWindow.setVisible(false);
+				//findWindow.setVisible(false);
+
+          	  WindowEvent wev = new WindowEvent(FindW.this, WindowEvent.WINDOW_CLOSING);
+              Toolkit.getDefaultToolkit().getSystemEventQueue().postEvent(wev);
+
+
 			}
 		});
 		sl_pane.putConstraint(SpringLayout.NORTH, closeBt, 163, SpringLayout.NORTH, pane);
