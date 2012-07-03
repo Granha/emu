@@ -42,14 +42,9 @@ public class EMUDoc extends PlainDocument {
 	// ********************** CONSTRUCTORS
 
 	// Cria um documento vazio
-        public EMUDoc() {
-            
-            userList.add(1);
-            userList.add(2);
-            userList.add(3);
-            userList.add(4);
-            
-        }	
+	//public EMUDoc() {
+		
+	//}
 
 	public EMUDoc(String pathName, boolean isRemote) {
 		this.pathName = pathName;
