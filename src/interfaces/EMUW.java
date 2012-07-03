@@ -6,9 +6,7 @@
 package interfaces;
 
 	import java.awt.BorderLayout;
-import java.awt.Color;
 	import java.awt.Dialog;
-import java.awt.Event;
 	import java.awt.EventQueue;
 	import java.awt.Font;
 	import java.awt.event.ActionEvent;
@@ -16,7 +14,6 @@ import java.awt.Event;
 	import java.awt.event.InputEvent;
 	import java.awt.event.KeyEvent;
 	
-import javax.swing.DefaultListModel;
 	import javax.swing.JDialog;
 	import javax.swing.JFrame;
 	import javax.swing.JMenu;
@@ -31,11 +28,6 @@ import javax.swing.DefaultListModel;
 	import javax.swing.KeyStroke;
 	import javax.swing.ScrollPaneConstants;
 	import javax.swing.border.EmptyBorder;
-import javax.swing.text.BadLocationException;
-import javax.swing.text.DefaultHighlighter;
-import javax.swing.text.Document;
-import javax.swing.text.Highlighter;
-import javax.swing.text.Highlighter.HighlightPainter;
 	
 	import emu.EMU;
 	
@@ -43,13 +35,8 @@ import javax.swing.text.Highlighter.HighlightPainter;
 	import static emu.EMU.*;
 	import java.awt.Dimension;
 	import javax.swing.JTextArea;
-import java.awt.Rectangle;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
-import java.awt.event.KeyAdapter;
-
+	import java.awt.Rectangle;
+	
 
 @SuppressWarnings("serial")
 public class EMUW extends JFrame {
@@ -77,10 +64,7 @@ public class EMUW extends JFrame {
     public int curFontSize = 3;		// initial value is default: font size 12
 	
 	public EMUW() {
-        this(winX, winY, winHeight, winWidth, null);   
-        cd = new EMUDoc();
-        //text.setText("asdasdasdsdas 4444444 asdasdsd 6666 8888 11111 sssss 666 888888 222 asdasd 888\n 222 3333 999 asd 3333");
-
+        this(winX, winY, winHeight, winWidth, null);
 	}
 
     // standard position and sizes and a EMUDoc associated
@@ -96,7 +80,7 @@ public class EMUW extends JFrame {
 		if (doc != null)
 			cd = doc;
 		else
-			cd = new EMUDoc(" ");
+			cd = new EMUDoc("default text...");
 		
 		cw = this;
 		int CMASK = InputEvent.CTRL_MASK;
@@ -104,8 +88,7 @@ public class EMUW extends JFrame {
 		int SMASK = InputEvent.SHIFT_MASK;
 		
 		setMinimumSize(new Dimension(400, 200));
-		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		//setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
+		setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
 		setBounds(100, 100, 450, 300);
 		setTitle("EMU - Multiuser Editor");
 		
@@ -124,7 +107,7 @@ public class EMUW extends JFrame {
 		});
 		menuBar.add(mnNewMenu);
 		
-		JMenuItem mntmAboutEmu = new JMenuItem("About EMU");
+		JMenuItem mntmAboutEmu = new JMenuItem("About EMU...");
 		mntmAboutEmu.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 	            JOptionPane.showMessageDialog(getContentPane(),
@@ -138,7 +121,7 @@ public class EMUW extends JFrame {
 		JSeparator separator = new JSeparator();
 		mnNewMenu.add(separator);
 		
-		JMenuItem mntmPreferences = new JMenuItem("Preferences");
+		JMenuItem mntmPreferences = new JMenuItem("Preferences...");
 		mntmPreferences.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				prefsW.setVisible(true);
@@ -150,7 +133,7 @@ public class EMUW extends JFrame {
 		JSeparator separator_1 = new JSeparator();
 		mnNewMenu.add(separator_1);
 		
-		JMenuItem mntmLogin = new JMenuItem("Login");
+		JMenuItem mntmLogin = new JMenuItem("Login...");
 		mntmLogin.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				loginW.setVisible(true);
@@ -187,19 +170,16 @@ public class EMUW extends JFrame {
 		JMenu mnFile = new JMenu("FIle");
 		menuBar.add(mnFile);
 		
-		JMenuItem mntmNewMenuItem = new JMenuItem("New File");
+		JMenuItem mntmNewMenuItem = new JMenuItem("New File...");
 		mntmNewMenuItem.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if (newFileW == null)
-					newFileW = new NewFileW();
-				newFileW.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 				newFileW.setVisible(true);
 			}
 		});
 		mntmNewMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, CMASK));
 		mnFile.add(mntmNewMenuItem);
 		
-		JMenuItem mntmNewMenuItem_1 = new JMenuItem("Open & Save File");
+		JMenuItem mntmNewMenuItem_1 = new JMenuItem("Open & Save File...");
 		mntmNewMenuItem_1.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				System.out.println("File chooser here");
@@ -232,7 +212,7 @@ public class EMUW extends JFrame {
 		JSeparator separator_3 = new JSeparator();
 		mnFile.add(separator_3);
 		
-		JMenuItem mntmNewMenuItem_4 = new JMenuItem("Print");
+		JMenuItem mntmNewMenuItem_4 = new JMenuItem("Print...");
 		mntmNewMenuItem_4.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_P, CMASK));
 		mnFile.add(mntmNewMenuItem_4);
 		
@@ -244,7 +224,6 @@ public class EMUW extends JFrame {
 			public void actionPerformed(ActionEvent e) {
 				assert cd != null : "Cannot undo: current document does not exist";
 				cd.undo();
-				cd.h.undo();
 			}
 		});
 		mntmUndo.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Z, CMASK));
@@ -255,7 +234,6 @@ public class EMUW extends JFrame {
 			public void actionPerformed(ActionEvent e) {
 				assert cd != null : "Cannot redo: current document does not exist";
 				cd.redo();
-				cd.h.redo();
 			}
 		});
 		mntmNewMenuItem_5.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Y, CMASK));
@@ -370,9 +348,6 @@ public class EMUW extends JFrame {
 		JMenuItem mntmFind = new JMenuItem("Find...");
 		mntmFind.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if (findW == null)
-					findW = new FindW();
-				findW.emuw =  EMUW.this;
 				findW.setVisible(true);
 			}
 		});
@@ -434,15 +409,6 @@ public class EMUW extends JFrame {
 		JMenuItem mntmShowhideUsers = new JMenuItem("Show/Hide Users");
 		mntmShowhideUsers.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				//create a list to be view in the user list
-				if (usersW == null)
-					usersW = new UsersW();
-				String s = cd.userList.toString();
-				String ar[] = s.substring(1,s.length()-1).split(", ");
-				usersW.listData.clear();
-				for (int i=0; i < ar.length; i++)
-					usersW.listData.addElement(ar[i]); 	
-				usersW.emuw =  EMUW.this;
 				usersW.setVisible(true);
 			}
 		});
@@ -483,17 +449,6 @@ public class EMUW extends JFrame {
 		});
 		mnHelp.add(mntmShortcuts);
 		contentPane = new JPanel();
-		contentPane.addComponentListener(new ComponentAdapter() {
-			@Override
-			public void componentResized(ComponentEvent arg0) {
-				
-				
-				//JOptionPane.showMessageDialog(EMUW.this,new String(text.getWidth() + "" ));
-				
-				
-				
-			}
-		});
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		contentPane.setLayout(new BorderLayout(0, 0));
 		setContentPane(contentPane);
@@ -507,20 +462,6 @@ public class EMUW extends JFrame {
 		textPane = new JScrollPane();
 		textPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 		text = new JTextArea();
-		text.addKeyListener(new KeyAdapter() {
-			@Override
-			public void keyPressed(KeyEvent ev) {
-				//if (ev.getKeyCode() == Event.ENTER)
-					
-			}
-		});
-		text.setLineWrap(true);
-		text.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseClicked(MouseEvent arg0) {
-				text.getHighlighter().removeAllHighlights();
-			}
-		});
 		text.setColumns(60);
 		splitPane.setTopComponent(textPane);
 		text.setDocument(cd);
@@ -587,28 +528,6 @@ public class EMUW extends JFrame {
         // set new current window
     	winList.remove(win);
     }
-
-    public void highLight(String pattern)
-    {
-        try {
-            Highlighter hilite = text.getHighlighter();
-            Document doc = text.getDocument();
-            String txt = doc.getText(0, doc.getLength());
-            int pos = 0;
-
-       	    // Remove previous highlights and put only the last one
-     	    hilite.removeAllHighlights();
-    	    
-            // Search for pattern
-            while ((pos = txt.indexOf(pattern, pos)) >= 0) {
-            	// Create highlighter using private painter and apply around pattern
-                hilite.addHighlight(pos, pos+pattern.length(), new DefaultHighlighter.DefaultHighlightPainter(Color.yellow));
-                pos += pattern.length();
-            }
-        } catch (BadLocationException e) {
-        }
-    }
-
 
 	/**
 	 * Launch the application.
